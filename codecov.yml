@@ -1,0 +1,76 @@
+codecov:
+  token: CODECOV_TOKEN
+  strict_yaml_branch: main
+  require_ci_to_pass: true
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 2%
+    patch:
+      default:
+        target: 80%
+        threshold: 2%
+
+flag_management:
+  default_rules:
+    carryforward: true
+    statuses:
+      - type: project
+        target: auto
+        threshold: 1%
+      - type: patch
+        target: 90%
+
+  individual_flags:
+    - name: cli
+      paths:
+        - src/bin/
+        - src/cli/
+      carryforward: true
+      statuses:
+        - type: project
+          target: 80%
+        - type: patch
+          target: 100%
+
+    - name: core
+      paths:
+        - src/core/
+      carryforward: true
+      statuses:
+        - type: project
+          target: 85%
+        - type: patch
+          target: 100%
+
+    - name: utils
+      paths:
+        - src/utils/
+      carryforward: true
+      statuses:
+        - type: project
+          target: 75%
+        - type: patch
+          target: 100%
+
+    - name: tests
+      paths:
+        - tests/
+      carryforward: true
+      statuses:
+        - type: project
+          target: 50%
+        - type: patch
+          target: 100%
+
+github_checks:
+  annotations: true
+
+comment:
+  layout: 'reach, diff, flags, files'
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: false

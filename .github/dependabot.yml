@@ -1,0 +1,52 @@
+version: 2
+updates:
+  # ===========================
+  # Composer Updates (Weekly + Security)
+  # ===========================
+  - package-ecosystem: "composer"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build(composer): [skip ci]"
+    reviewers:
+      - "iamsenthilprabu"
+    labels:
+      - "dependencies"
+      - "composer"
+    allow:
+      - dependency-type: "direct" # Enables daily security updates
+
+  # ===========================
+  # NPM Updates (Weekly + Security)
+  # ===========================
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build(npm): [skip ci]"
+    reviewers:
+      - "iamsenthilprabu"
+    labels:
+      - "dependencies"
+      - "npm"
+    allow:
+      - dependency-type: "direct" # Enables daily security updates
+
+  # ===========================
+  # GitHub Actions Updates (Weekly + Security)
+  # ===========================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build(actions): [skip ci]"
+    reviewers:
+      - "iamsenthilprabu"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    allow:
+      - dependency-type: "direct" # Enables daily security updates

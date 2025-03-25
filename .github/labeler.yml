@@ -1,0 +1,48 @@
+# Label for changes in devops files
+devops:
+  - changed-files:
+      - any-glob-to-any-file: '.github/**'
+      - any-glob-to-any-file: '.husky/**'
+
+# Label for changes in dependency files
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file: 'package-lock.json'
+      - any-glob-to-any-file: 'package.json'
+
+# Label for changes in test files
+tests:
+  - changed-files:
+      - any-glob-to-any-file: 'tests/**'
+
+# Label for changes in documentation
+documentation:
+  - changed-files:
+      - any-glob-to-any-file: '**/*.md'
+
+# Label for changes in JS files
+js:
+  - changed-files:
+      - any-glob-to-any-file: '**/*.ts'
+      - any-glob-to-any-file: '**/*.js'
+      - any-glob-to-any-file: '**/*.cjs'
+      - any-glob-to-any-file: '**/*.mjs'
+
+# Label for changes in configuration files
+configuration:
+  - changed-files:
+      - any-glob-to-any-file: '.depkit.json'
+      - any-glob-to-any-file: '.editorconfig'
+      - any-glob-to-any-file: '.gitignore'
+      - any-glob-to-any-file: '.lintrc.json'
+      - any-glob-to-any-file: '.markdownlint.json'
+      - any-glob-to-any-file: '.prettierignore'
+      - any-glob-to-any-file: '.prettierrc.json'
+      - any-glob-to-any-file: 'codecov.yml'
+      - any-glob-to-any-file: 'commitlint.config.js'
+      - any-glob-to-any-file: 'cspell.json'
+      - any-glob-to-any-file: 'cspell.txt'
+      - any-glob-to-any-file: 'eslint.config.js'
+      - any-glob-to-any-file: 'release.config.js'
+      - any-glob-to-any-file: 'tsconfig.json'
+      - any-glob-to-any-file: 'vitest.config.ts'
