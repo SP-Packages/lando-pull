@@ -1,0 +1,121 @@
+{
+  "name": "@sp-packages/lando-pull",
+  "description": "A CLI tool for syncing remote databases and files to your local Lando environment.",
+  "version": "0.0.1",
+  "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "Senthilprabu Ponnusamy",
+    "email": "info@senthilprabu.in",
+    "url": "https://www.senthilprabu.in"
+  },
+  "funding": "https://github.com/sponsors/iamsenthilprabu",
+  "keywords": [
+    "lando",
+    "wordpress",
+    "database",
+    "sync",
+    "pull",
+    "development"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SP-Packages/lando-pull.git"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "bin": {
+    "lando-pull": "dist/bin/lando-pull.js"
+  },
+  "exports": {
+    ".": "./dist/lando-pull.js",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/lando-pull.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "depcheck": {
+    "ignores": [
+      "codecov",
+      "conventional-changelog-conventionalcommits",
+      "cspell",
+      "depcheck",
+      "husky",
+      "semantic-release",
+      "markdownlint-cli",
+      "@commitlint/config-conventional",
+      "@semantic-release/changelog",
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/exec",
+      "@semantic-release/git",
+      "@semantic-release/npm",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/github",
+      "@types/node",
+      "@vitest/coverage-v8"
+    ]
+  },
+  "lint-staged": {
+    "*": [
+      "npx lintrc"
+    ]
+  },
+  "dependencies": {
+    "@sp-packages/printer": "^2.5.0",
+    "commander": "^13.1.0",
+    "fs-extra": "^11.2.0",
+    "mysql2": "^3.9.2"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.0",
+    "@commitlint/config-conventional": "^19.8.0",
+    "@eslint/js": "^9.22.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/exec": "^7.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.1",
+    "@semantic-release/npm": "^12.0.1",
+    "@semantic-release/release-notes-generator": "^14.0.3",
+    "@sp-packages/depkit": "^2.1.0",
+    "@sp-packages/lintrc": "^1.1.0",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.13.10",
+    "@vitest/coverage-v8": "^3.0.8",
+    "codecov": "^3.8.3",
+    "conventional-changelog-conventionalcommits": "^8.0.0",
+    "cspell": "^8.17.5",
+    "depcheck": "^1.4.7",
+    "esbuild": "^0.25.1",
+    "eslint": "^9.22.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-jsdoc": "^50.6.3",
+    "eslint-plugin-prettier": "^5.2.3",
+    "eslint-plugin-tsdoc": "^0.4.0",
+    "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "markdownlint-cli": "^0.44.0",
+    "prettier": "^3.5.3",
+    "semantic-release": "^24.2.3",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.0",
+    "vitest": "^3.0.8"
+  },
+  "scripts": {
+    "build": "tsc && esbuild dist/**/*.js --minify --outdir=dist --allow-overwrite --tree-shaking=true --platform=node",
+    "commitlint": "commitlint --from=origin/main --to=HEAD --verbose",
+    "cspell": "cspell --no-progress --no-summary",
+    "eslint:fix": "eslint --fix",
+    "prepare": "husky install",
+    "prettier:write": "prettier --write",
+    "depkit": "npx depkit",
+    "lintrc": "npx lintrc",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage"
+  }
+}
