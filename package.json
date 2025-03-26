@@ -1,7 +1,7 @@
 {
   "name": "@sp-packages/lando-pull",
   "description": "A CLI tool for syncing remote databases and files to your local Lando environment.",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "type": "module",
   "license": "MIT",
   "author": {
