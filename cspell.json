@@ -1,0 +1,12 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "useGitignore": true,
+  "dictionaryDefinitions": [
+    {
+      "name": "custom",
+      "path": "cspell.txt"
+    }
+  ],
+  "dictionaries": ["custom", "typescript"]
+}

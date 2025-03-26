@@ -1,0 +1,19 @@
+name: Analyze
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  analyze:
+    uses: SP-Packages/actions/.github/workflows/code-quality.yml@main
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    with:
+      slug: SP-Packages/lando-pull
+    permissions:
+      contents: read
+      pull-requests: write
