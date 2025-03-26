@@ -38,6 +38,7 @@ export interface DatabaseUpdate {
  * @param dbUser - Remote database username
  * @param dbPassword - Remote database password
  * @param remoteFiles - Path to files directory on remote server
+ * @param tempFolder - Path to temporary folder for file operations
  */
 export interface RemoteConfig {
   host: string;
@@ -50,6 +51,7 @@ export interface RemoteConfig {
   dbUser: string;
   dbPassword: string;
   remoteFiles: string;
+  tempFolder: string;
 }
 
 /**
@@ -60,6 +62,7 @@ export interface RemoteConfig {
  * @param dbPassword - Local database password
  * @param dbPort - Local database port number
  * @param localFiles - Path to local files directory
+ * @param tempFolder - Path to temporary folder for file operations
  * @param databaseUpdates - Optional array of database updates to perform after pull
  */
 export interface LocalConfig {
@@ -69,6 +72,7 @@ export interface LocalConfig {
   dbPassword: string;
   dbPort: number;
   localFiles: string;
+  tempFolder: string;
   databaseUpdates?: DatabaseUpdate[];
 }
 
@@ -84,6 +88,7 @@ export interface PullConfig {
 
 /**
  * Optional settings for pull operations
+ * @param debug - Enable debug mode when true
  * @param skipDb - Skip database pull when true
  * @param skipFiles - Skip files pull when true
  * @param authMethod - Optional SSH authentication method override
@@ -93,6 +98,7 @@ export interface PullConfig {
  * @param quiet - Suppress all non-error output when true
  */
 export interface PullOptions {
+  debug?: boolean;
   skipDb?: boolean;
   skipFiles?: boolean;
   authMethod?: string;
