@@ -9,9 +9,10 @@ export class Executer {
   private config: PullConfig;
 
   /**
-   * Time units for the executer class.
+   * Default units for the executer class.
    */
-  private static readonly TIME_UNITS = {
+  private static readonly UNITS = {
+    IMPORT_RETRIES: 3,
     MINUTES_TIMEOUT: 5,
     MS_PER_SECOND: 1000,
     SECONDS_PER_MINUTE: 60
@@ -21,9 +22,9 @@ export class Executer {
    * Time units for the executer class.
    */
   IMPORT_TIMEOUT_MS =
-    Executer.TIME_UNITS.MINUTES_TIMEOUT *
-    Executer.TIME_UNITS.SECONDS_PER_MINUTE *
-    Executer.TIME_UNITS.MS_PER_SECOND;
+    Executer.UNITS.MINUTES_TIMEOUT *
+    Executer.UNITS.SECONDS_PER_MINUTE *
+    Executer.UNITS.MS_PER_SECOND;
 
   /**
    * Create a new executer instance.
@@ -243,7 +244,7 @@ export class Executer {
    */
   private async importDatabase(
     localTempFile: string,
-    retries: number = 3
+    retries: number = Executer.UNITS.IMPORT_RETRIES
   ): Promise<void> {
     const { dbHost, dbName, dbUser, dbPort, dbPassword } = this.config.local;
     const escapedDbPassword = dbPassword.replace(/[$`"\\]/g, '\\$&');
@@ -671,8 +672,7 @@ export class Executer {
         await this.importFiles();
       }
 
-      const duration =
-        (Date.now() - startTime) / Executer.TIME_UNITS.MS_PER_SECOND;
+      const duration = (Date.now() - startTime) / Executer.UNITS.MS_PER_SECOND;
 
       return {
         success: true,
