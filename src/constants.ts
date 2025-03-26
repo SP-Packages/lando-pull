@@ -12,6 +12,7 @@ export const DEFAULT_CONFIG: PullConfig = {
     dbName: 'database_name', // CHANGE THIS
     dbUser: 'database_user', // CHANGE THIS
     dbPassword: 'database_password', // CHANGE THIS
+    tempFolder: '/tmp',
     remoteFiles: 'website/root/path'
   },
   local: {
@@ -20,6 +21,7 @@ export const DEFAULT_CONFIG: PullConfig = {
     dbUser: 'wordpress', // CHANGE THIS
     dbPassword: 'wordpress', // CHANGE THIS
     dbPort: 3306,
+    tempFolder: '/tmp',
     localFiles: 'website/root/path',
     databaseUpdates: [
       {

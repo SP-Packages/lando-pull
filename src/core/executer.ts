@@ -7,12 +7,6 @@ import { PullConfig, PullOptions, SqlCondition } from './../types/types.js';
 
 export class Executer {
   private config: PullConfig;
-  private tempRemoteBackupPath: string = '/tmp/temp-db-backup.sql.gz';
-  private tempLocalBackupPath: string = path.join(
-    process.cwd(),
-    'lando-pull-backups',
-    `db-backup-${Date.now()}.sql.gz`
-  );
 
   /**
    * Time units for the executer class.
@@ -107,8 +101,9 @@ export class Executer {
 
   /**
    * Create a remote database backup.
+   * @returns A promise that resolves with the path to the remote backup file
    */
-  private async createRemoteDbBackup(): Promise<void> {
+  private async createRemoteDbBackup(): Promise<string> {
     const {
       host,
       user,
@@ -118,11 +113,13 @@ export class Executer {
       keyPath,
       dbName,
       dbUser,
-      dbPassword
+      dbPassword,
+      tempFolder
     } = this.config.remote;
 
     let backupCommand: string[] = [];
     const escapedDbPassword = dbPassword.replace(/[$`"\\]/g, '\\$&');
+    const remoteTempFile = path.join(tempFolder, 'temp-db-backup.sql.gz');
 
     if (authMethod === 'key') {
       if (!keyPath || !fs.existsSync(keyPath)) {
@@ -139,7 +136,7 @@ export class Executer {
         '-i',
         keyPath,
         `${user}@${host}`,
-        `mysqldump --force --no-tablespaces --default-character-set=utf8mb3 -u${dbUser} -p${escapedDbPassword} ${dbName} | gzip > ${this.tempRemoteBackupPath}`
+        `mysqldump --force --no-tablespaces --default-character-set=utf8mb3 -u${dbUser} -p${escapedDbPassword} ${dbName} | gzip > ${remoteTempFile}`
       ];
     }
 
@@ -157,7 +154,7 @@ export class Executer {
         '-p',
         port.toString(),
         `${user}@${host}`,
-        `mysqldump --force --no-tablespaces --default-character-set=utf8mb3 -u${dbUser} -p${escapedDbPassword} ${dbName} | gzip > ${this.tempRemoteBackupPath}`
+        `mysqldump --force --no-tablespaces --default-character-set=utf8mb3 -u${dbUser} -p${escapedDbPassword} ${dbName} | gzip > ${remoteTempFile}`
       ];
     }
 
@@ -167,6 +164,7 @@ export class Executer {
         'Failed to create remote backup'
       );
       Printer.log('Remote database backup created successfully', 'success');
+      return remoteTempFile;
     } catch (error) {
       Printer.error(error instanceof Error ? error.message : String(error));
       throw error;
@@ -175,12 +173,18 @@ export class Executer {
 
   /**
    * Copy the remote database backup locally.
+   * @param remoteTempFile - The path to the remote backup file
+   * @returns A promise that resolves with the path to the local backup file
    */
-  private async copyRemoteBackup(): Promise<void> {
+  private async copyRemoteBackup(remoteTempFile: string): Promise<string> {
     const { host, user, port, authMethod, password, keyPath } =
       this.config.remote;
 
-    fs.ensureDirSync(path.dirname(this.tempLocalBackupPath));
+    fs.ensureDirSync(this.config.local.tempFolder);
+    const localTempFile = path.join(
+      this.config.local.tempFolder,
+      `db-backup-${Date.now()}.sql.gz`
+    );
 
     let scpCommand: string[] = [];
 
@@ -199,8 +203,8 @@ export class Executer {
         port.toString(),
         '-i',
         keyPath,
-        `${user}@${host}:${this.tempRemoteBackupPath}`,
-        this.tempLocalBackupPath
+        `${user}@${host}:${remoteTempFile}`,
+        localTempFile
       ];
     }
 
@@ -218,13 +222,14 @@ export class Executer {
         'StrictHostKeyChecking=no',
         '-P',
         port.toString(),
-        `${user}@${host}:${this.tempRemoteBackupPath}`,
-        this.tempLocalBackupPath
+        `${user}@${host}:${remoteTempFile}`,
+        localTempFile
       ];
     }
     try {
       await this.executeRemoteCommand(scpCommand, 'Failed to copy backup');
       Printer.log('Database backup copied successfully', 'success');
+      return localTempFile;
     } catch (error) {
       Printer.error(error instanceof Error ? error.message : String(error));
       throw error;
@@ -233,8 +238,13 @@ export class Executer {
 
   /**
    * Import the database backup locally.
+   * @param localTempFile - The path to the local backup file
+   * @param retries - The number of retries to attempt
    */
-  private async importDatabase() {
+  private async importDatabase(
+    localTempFile: string,
+    retries: number = 3
+  ): Promise<void> {
     const { dbHost, dbName, dbUser, dbPort, dbPassword } = this.config.local;
     const escapedDbPassword = dbPassword.replace(/[$`"\\]/g, '\\$&');
 
@@ -250,97 +260,149 @@ export class Executer {
       dbName
     ];
 
-    return new Promise((resolve, reject) => {
-      const importProcess = spawn('mysql', importCommand.slice(1), {
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-      const buffers = { stdout: '', stderr: '' };
+    const attemptImport = (): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        const importProcess = spawn('mysql', importCommand.slice(1), {
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+        const buffers = { stdout: '', stderr: '' };
 
-      const gunzipProcess = spawn('gunzip', ['-c', this.tempLocalBackupPath], {
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-      const gunzipBuffers = { stdout: '', stderr: '' };
+        const gunzipProcess = spawn('gunzip', ['-c', localTempFile], {
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+        const gunzipBuffers = { stdout: '', stderr: '' };
 
-      importProcess.stdout.on(
-        'data',
-        (data) => (buffers.stdout += data.toString())
-      );
-      importProcess.stderr.on(
-        'data',
-        (data) => (buffers.stderr += data.toString())
-      );
-
-      gunzipProcess.stderr.on(
-        'data',
-        (data) => (gunzipBuffers.stderr += data.toString())
-      );
-
-      // Pipe the decompressed SQL data into MySQL
-      const fileStream = fs.createReadStream(this.tempLocalBackupPath);
-      fileStream.pipe(gunzipProcess.stdin);
-      gunzipProcess.stdout.pipe(importProcess.stdin);
-
-      const importTimeout = setTimeout(() => {
-        Printer.error(
-          'Database import timeout reached. Terminating processes...'
+        importProcess.stdout.on(
+          'data',
+          (data) => (buffers.stdout += data.toString())
         );
-        importProcess.kill('SIGKILL');
-        gunzipProcess.kill('SIGKILL');
-        fileStream.destroy();
-        const message = `${buffers.stdout}${buffers.stderr}`.trim();
-        if (message) Printer.error(message);
-        reject(new Error('Database import timed out'));
-      }, this.IMPORT_TIMEOUT_MS);
+        importProcess.stderr.on(
+          'data',
+          (data) => (buffers.stderr += data.toString())
+        );
 
-      importProcess.on('close', (code) => {
-        clearTimeout(importTimeout);
-        const message = `${buffers.stdout}${buffers.stderr}`.trim();
+        gunzipProcess.stderr.on(
+          'data',
+          (data) => (gunzipBuffers.stderr += data.toString())
+        );
 
-        if (code === 0) {
-          Printer.log('Database imported successfully', 'success');
-          Printer.log(message.trim());
+        // Pipe the decompressed SQL data into MySQL
+        const fileStream = fs.createReadStream(localTempFile);
+        fileStream.pipe(gunzipProcess.stdin);
+        gunzipProcess.stdout.pipe(importProcess.stdin);
 
-          Printer.log('Database updates...', 'section');
-          this.updateDatabaseValues()
-            .then(() => resolve(null))
-            .catch(reject);
+        const importTimeout = setTimeout(() => {
+          Printer.error(
+            'Database import timeout reached. Terminating processes...'
+          );
+          importProcess.kill('SIGKILL');
+          gunzipProcess.kill('SIGKILL');
+          fileStream.destroy();
+          const message = `${buffers.stdout}${buffers.stderr}`.trim();
+          if (message) Printer.error(message);
+          reject(new Error('Database import timed out'));
+        }, this.IMPORT_TIMEOUT_MS);
+
+        importProcess.on('close', (code) => {
+          clearTimeout(importTimeout);
+          const message = `${buffers.stdout}${buffers.stderr}`.trim();
+
+          if (code === 0) {
+            Printer.log('Database imported successfully', 'success');
+            Printer.log(message.trim());
+
+            Printer.log('Database updates...', 'section');
+            this.updateDatabaseValues()
+              .then(() => resolve())
+              .catch(reject);
+          } else {
+            Printer.error(`Exit code: ${code}`);
+            Printer.error(message.trim());
+            reject(new Error(`Database import failed with exit code ${code}`));
+          }
+        });
+
+        importProcess.on('error', (error) => {
+          clearTimeout(importTimeout);
+          Printer.error(
+            `Database import process error: ${error instanceof Error ? error.message : String(error)}`
+          );
+          reject(error);
+        });
+
+        gunzipProcess.on('close', (code) => {
+          if (code !== 0) {
+            reject(new Error(`Gunzip failed: ${gunzipBuffers.stderr.trim()}`));
+          }
+        });
+
+        gunzipProcess.on('error', (error) => {
+          Printer.error(
+            `Gunzip process error: ${error instanceof Error ? error.message : String(error)}`
+          );
+          reject(error);
+        });
+
+        // Handle stream errors
+        fileStream.on('error', (error) => {
+          Printer.error(
+            `File stream error: ${error instanceof Error ? error.message : String(error)}`
+          );
+          reject(error);
+        });
+
+        gunzipProcess.stdin.on('error', (error) => {
+          Printer.error(
+            `Gunzip stdin error: ${error instanceof Error ? error.message : String(error)}`
+          );
+          reject(error);
+        });
+
+        gunzipProcess.stdout.on('error', (error) => {
+          Printer.error(
+            `Gunzip stdout error: ${error instanceof Error ? error.message : String(error)}`
+          );
+          reject(error);
+        });
+
+        importProcess.stdin.on('error', (error) => {
+          Printer.error(
+            `MySQL stdin error: ${error instanceof Error ? error.message : String(error)}`
+          );
+          reject(error);
+        });
+
+        importProcess.stdout.on('error', (error) => {
+          Printer.error(
+            `MySQL stdout error: ${error instanceof Error ? error.message : String(error)}`
+          );
+          reject(error);
+        });
+
+        // Close stdin streams properly when file reading is done
+        fileStream.on('end', () => {
+          gunzipProcess.stdin.end();
+        });
+
+        gunzipProcess.stdout.on('end', () => {
+          importProcess.stdin.end();
+        });
+      });
+    };
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        await attemptImport();
+        return; // If successful, exit the function
+      } catch (error) {
+        if (attempt < retries) {
+          Printer.error(`Attempt ${attempt} failed. Retrying...`);
         } else {
-          Printer.error(`Exit code: ${code}`);
-          Printer.error(message.trim());
-          reject(new Error(`Database import failed with exit code ${code}`));
+          Printer.error(`All ${retries} attempts failed.`);
+          throw error;
         }
-      });
-
-      importProcess.on('error', (error) => {
-        clearTimeout(importTimeout);
-        Printer.error(
-          `Database import process error: ${error instanceof Error ? error.message : String(error)}`
-        );
-        reject(error);
-      });
-
-      gunzipProcess.on('close', (code) => {
-        if (code !== 0) {
-          reject(new Error(`Gunzip failed: ${gunzipBuffers.stderr.trim()}`));
-        }
-      });
-
-      gunzipProcess.on('error', (error) => {
-        Printer.error(
-          `Gunzip process error: ${error instanceof Error ? error.message : String(error)}`
-        );
-        reject(error);
-      });
-
-      // Close stdin streams properly when file reading is done
-      fileStream.on('end', () => {
-        gunzipProcess.stdin.end();
-      });
-
-      gunzipProcess.stdout.on('end', () => {
-        importProcess.stdin.end();
-      });
-    });
+      }
+    }
   }
 
   /**
@@ -483,20 +545,31 @@ export class Executer {
   }
 
   /**
-   * Cleanup temporary files and remote backups.
+   * Clean up temporary files and directories.
+   * @param debug - Whether to keep the local backup in debug mode
+   * @param localTempFile - The path to the local backup file
+   * @param remoteTempFile - The path to the remote backup file
    */
-  private async cleanup(): Promise<void> {
+  private async cleanup(
+    debug: boolean,
+    localTempFile?: string,
+    remoteTempFile?: string
+  ): Promise<void> {
     const cleanupTasks = [
-      // Local backup cleanup
-      (async () => {
-        try {
-          if (await fs.pathExists(this.tempLocalBackupPath)) {
-            await fs.unlink(this.tempLocalBackupPath);
-          }
-        } catch (error) {
-          Printer.error(`Failed to remove local backup: ${error}`);
-        }
-      })(),
+      // Local backup cleanup (if not in debug mode)
+      ...(debug
+        ? []
+        : [
+            (async () => {
+              try {
+                if (localTempFile && (await fs.pathExists(localTempFile))) {
+                  fs.unlink(localTempFile);
+                }
+              } catch (error) {
+                Printer.error(`Failed to remove local backup: ${error}`);
+              }
+            })()
+          ]),
 
       // Remote backup cleanup
       (async () => {
@@ -520,7 +593,7 @@ export class Executer {
             '-i',
             keyPath,
             `${user}@${host}`,
-            `rm -f ${this.tempRemoteBackupPath}`
+            `rm -f ${remoteTempFile}`
           ];
         }
 
@@ -538,7 +611,7 @@ export class Executer {
             '-p',
             port.toString(),
             `${user}@${host}`,
-            `rm -f ${this.tempRemoteBackupPath}`
+            `rm -f ${remoteTempFile}`
           ];
         }
 
@@ -553,6 +626,13 @@ export class Executer {
       })()
     ];
 
+    if (debug) {
+      Printer.log(
+        `Debug mode: Keeping local backup at ${localTempFile}`,
+        'warning'
+      );
+    }
+
     await Promise.all(cleanupTasks);
   }
 
@@ -563,8 +643,8 @@ export class Executer {
    */
   async pull(options: PullOptions = {}) {
     const startTime = Date.now();
-    const { skipDb = false, skipFiles = false } = options;
-
+    const { skipDb = false, skipFiles = false, debug = false } = options;
+    let localTempFile, remoteTempFile;
     try {
       // Validate dependencies
       this.validateDependencies();
@@ -574,15 +654,15 @@ export class Executer {
 
         // Create remote backup
         Printer.log('Creating remote database backup...', 'section');
-        await this.createRemoteDbBackup();
+        remoteTempFile = await this.createRemoteDbBackup();
 
         // Copy backup locally
         Printer.log('Copying remote database backup...', 'section');
-        await this.copyRemoteBackup();
+        localTempFile = await this.copyRemoteBackup(remoteTempFile);
 
         // Import database
         Printer.log('Importing database...', 'section');
-        await this.importDatabase();
+        await this.importDatabase(localTempFile);
       }
 
       if (!skipFiles) {
@@ -604,8 +684,8 @@ export class Executer {
       throw error;
     } finally {
       Printer.log('Cleaning up...', 'subheader');
-      await this.cleanup()
-        .then(() => Printer.log('Cleanup complete', 'success'))
+      await this.cleanup(debug, localTempFile, remoteTempFile)
+        .then(() => !debug && Printer.log('Cleanup complete', 'success'))
         .catch((err) => Printer.error(`Cleanup failed: ${err}`));
     }
   }

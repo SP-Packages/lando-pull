@@ -67,15 +67,17 @@ Usage: Lando Pull [options]
 A CLI tool for syncing remote databases and files to your local Lando environment.
 
 Options:
-  -c, --config <config>  Path to the configuration file (default: .landorc)
-  --skip-db              Skip database sync
-  --skip-files           Skip file sync
-  --auth-method <method> Authentication method: 'password' or 'key'
-  --password <password>  Remote server password (recommended via ENV)
-  --key-path <keyPath>   Path to SSH private key (for key-based authentication)
-  -q, --quiet            Disable output
-  -v, --verbose          Enable verbose logging
-  -h, --help             Display help for command
+  -V, --version           output the version number
+  -c, --config <config>   Path to the configuration file (default: .landorc)
+  -d, --debug             Debug mode
+  -q, --quiet             Disable output
+  -v, --verbose           Enable verbose logging
+  --skip-db               Skip database
+  --skip-files            Skip files
+  --auth-method <method>  Authentication method: 'password' or 'key'
+  --key-path <keyPath>    Path to SSH private key (for key-based auth)
+  --password [password]   Remote server password (for password auth, recommended via ENV)
+  -h, --help              display help for command
 ```
 
 #### **Examples:**
@@ -99,41 +101,58 @@ Lando Pull uses a configuration file (`.landorc`) to define remote connection de
 {
   "remote": {
     "host": "example.com",
-    "user": "ssh_user_name",
+    "user": "ssh_user",
     "port": 22,
-    "path": "/var/www/html",
-    "db": {
-      "name": "remote_db",
-      "user": "db_user",
-      "password": "db_pass",
-      "host": "127.0.0.1"
-    },
     "authMethod": "key",
-    "keyPath": "~/.ssh/id_rsa"
+    "keyPath": "/path/to/private/key",
+    "dbName": "database_name",
+    "dbUser": "database_user",
+    "dbPassword": "database_password",
+    "tempFolder": "/tmp",
+    "remoteFiles": "website/root/path/uploads"
   },
   "local": {
-    "dbName": "local_db",
-    "filesPath": "wp-content/uploads"
+    "dbHost": "127.0.0.1",
+    "dbName": "wordpress",
+    "dbUser": "wordpress",
+    "dbPassword": "wordpress",
+    "dbPort": 3306,
+    "tempFolder": "/tmp",
+    "localFiles": "website/root/path/uploads",
+    "databaseUpdates": [
+      {
+        "table": "wp_users",
+        "column": "user_email",
+        "conditions": [
+          {
+            "column": "user_login",
+            "operator": "=",
+            "value": "admin"
+          }
+        ],
+        "value": "local-admin@example.com"
+      }
+    ]
   }
 }
 ```
 
 ### **Configurable Options**
 
-| Key                  | Description                                         |
-| -------------------- | --------------------------------------------------- |
-| `remote.host`        | Remote server hostname                              |
-| `remote.user`        | SSH username                                        |
-| `remote.port`        | SSH port (default: `22`)                            |
-| `remote.path`        | Remote folder to sync (e.g., `/wp-content/uploads`) |
-| `remote.db.name`     | Remote database name                                |
-| `remote.db.user`     | Remote database username                            |
-| `remote.db.password` | Remote database password                            |
-| `remote.db.host`     | Remote database host (e.g., `127.0.0.1`)            |
-| `remote.authMethod`  | Authentication method (`password` or `key`)         |
-| `remote.keyPath`     | SSH key file path (if using key authentication)     |
-| `local.dbName`       | Local database name                                 |
-| `local.filesPath`    | Local folder to sync (e.g., `/wp-content/uploads`)  |
+| Key                 | Description                                         |
+| ------------------- | --------------------------------------------------- |
+| `remote.host`       | Remote server hostname                              |
+| `remote.user`       | SSH username                                        |
+| `remote.port`       | SSH port (default: `22`)                            |
+| `remote.path`       | Remote folder to sync (e.g., `/wp-content/uploads`) |
+| `remote.dbName`     | Remote database name                                |
+| `remote.dbUser`     | Remote database username                            |
+| `remote.dbPassword` | Remote database password                            |
+| `remote.dbHost`     | Remote database host (e.g., `127.0.0.1`)            |
+| `remote.authMethod` | Authentication method (`password` or `key`)         |
+| `remote.keyPath`    | SSH key file path (if using key authentication)     |
+| `local.dbName`      | Local database name                                 |
+| `local.filesPath`   | Local folder to sync (e.g., `/wp-content/uploads`)  |
 
 ---
 

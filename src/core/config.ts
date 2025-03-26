@@ -56,14 +56,85 @@ export async function readConfig(configPath?: string): Promise<PullConfig> {
   try {
     const configData = fs.readFileSync(resolvedPath, 'utf-8');
     const config = JSON.parse(configData);
-    if (!config.remote || !config.local) {
+    // Validate required top-level sections
+    if (!config || typeof config !== 'object') {
+      throw new Error('Invalid configuration: must be a JSON object');
+    }
+
+    if (!config.remote || typeof config.remote !== 'object') {
       throw new Error(
-        "Invalid configuration: missing 'remote' or 'local' section"
+        "Invalid configuration: 'remote' section must be an object"
       );
     }
+
+    if (!config.local || typeof config.local !== 'object') {
+      throw new Error(
+        "Invalid configuration: 'local' section must be an object"
+      );
+    }
+
+    // Validate remote section required fields
+    const requiredRemoteFields = {
+      host: 'string',
+      user: 'string',
+      port: 'number',
+      authMethod: ['key', 'password'],
+      dbName: 'string',
+      dbUser: 'string',
+      dbPassword: 'string',
+      remoteFiles: 'string',
+      tempFolder: 'string'
+    };
+
+    const requiredLocalFields = {
+      dbHost: 'string',
+      dbName: 'string',
+      dbUser: 'string',
+      dbPassword: 'string',
+      dbPort: 'number',
+      localFiles: 'string',
+      tempFolder: 'string'
+    };
+
+    for (const [field, type] of Object.entries(requiredRemoteFields)) {
+      if (!config.remote[field]) {
+        throw new Error(`Invalid configuration: 'remote.${field}' is required`);
+      }
+
+      if (Array.isArray(type)) {
+        if (!type.includes(config.remote[field])) {
+          throw new Error(
+            `Invalid configuration: 'remote.${field}' must be one of: ${type.join(', ')}`
+          );
+        }
+      } else if (typeof config.remote[field] !== type) {
+        throw new Error(
+          `Invalid configuration: 'remote.${field}' must be a ${type}`
+        );
+      }
+    }
+
+    for (const [field, type] of Object.entries(requiredLocalFields)) {
+      if (!config.local[field]) {
+        throw new Error(`Invalid configuration: 'local.${field}' is required`);
+      }
+
+      if (Array.isArray(type)) {
+        if (!type.includes(config.local[field])) {
+          throw new Error(
+            `Invalid configuration: 'local.${field}' must be one of: ${type.join(', ')}`
+          );
+        }
+      } else if (typeof config.local[field] !== type) {
+        throw new Error(
+          `Invalid configuration: 'local.${field}' must be a ${type}`
+        );
+      }
+    }
+
     return config;
   } catch (error: unknown) {
-    Printer.error(`Error reading config file: ${resolvedPath}`, error);
+    Printer.error(error instanceof Error ? error.message : String(error));
     throw new Error(`Failed to read or parse config file: ${resolvedPath}`);
   }
 }
