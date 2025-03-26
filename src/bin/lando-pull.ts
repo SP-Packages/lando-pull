@@ -66,10 +66,15 @@ program
       config.remote.authMethod = options.authMethod;
     }
     if (options.password !== undefined) {
+      const envPassword = process.env.LANDO_REMOTE_PASSWORD;
       config.remote.password =
-        options.password === true
-          ? process.env.LANDO_REMOTE_PASSWORD
-          : options.password;
+        options.password === true ? envPassword || '' : options.password;
+
+      if (options.password === true && !envPassword) {
+        Printer.warning(
+          'LANDO_REMOTE_PASSWORD environment variable is not set'
+        );
+      }
     }
     if (options.keyPath) {
       config.remote.keyPath = options.keyPath;
