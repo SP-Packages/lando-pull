@@ -640,7 +640,7 @@ export class Executer {
   /**
    * Pull the database and files from the remote server.
    * @param options - The pull options
-   * @param spinner
+   * @param spinner - The spinner instance for logging progress
    * @returns A promise that resolves when the pull operation completes
    */
   async pull(options: PullOptions = {}, spinner: Ora) {
