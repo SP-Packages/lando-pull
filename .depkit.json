@@ -23,12 +23,19 @@
       "behavior": "error",
       "priority": 3
     },
+    "COMPOSER_UPDATE": {
+      "title": "Update PHP Dependencies",
+      "command": "update",
+      "type": "composer",
+      "behavior": "error",
+      "priority": 4
+    },
     "COMPOSER_OUTDATED": {
       "title": "Outdated PHP Dependencies",
       "command": "outdated",
       "type": "composer",
-      "behavior": "warn",
-      "priority": 4
+      "behavior": "error",
+      "priority": 5
     },
     "NPM_VERSION": {
       "title": "Checking NPM version",
@@ -37,37 +44,44 @@
       "args": ["--version"],
       "type": "npm",
       "behavior": "error",
-      "priority": 5
+      "priority": 6
     },
     "NPM_INSTALL": {
       "title": "Installing NPM Packages",
       "command": "install",
       "type": "npm",
       "behavior": "error",
-      "priority": 6
+      "priority": 7
     },
     "DEPCHECK": {
       "title": "Depcheck NPM Packages",
       "prefix": "npx",
       "command": "depcheck",
       "type": "npm",
-      "behavior": "warn",
+      "behavior": "error",
       "requires": "depcheck",
-      "priority": 7
+      "priority": 8
     },
     "NPM_AUDIT": {
       "title": "Auditing NPM Packages",
       "command": "audit",
       "type": "npm",
       "behavior": "error",
-      "priority": 8
+      "priority": 9
+    },
+    "NPM_UPDATE": {
+      "title": "Update NPM Packages",
+      "command": "update",
+      "type": "npm",
+      "behavior": "error",
+      "priority": 10
     },
     "NPM_OUTDATED": {
       "title": "Outdated NPM Packages",
       "command": "outdated",
       "type": "npm",
-      "behavior": "warn",
-      "priority": 9
+      "behavior": "error",
+      "priority": 11
     }
   }
 }
