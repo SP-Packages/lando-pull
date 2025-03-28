@@ -1,4 +1,4 @@
-name: Analyze
+name: Prepare
 
 on:
   workflow_dispatch:
@@ -8,12 +8,13 @@ on:
       - develop
 
 jobs:
-  analyze:
+  prepare:
     uses: SP-Packages/actions/.github/workflows/code-quality.yml@main
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
-      slug: SP-Packages/lando-pull
+      SLUG: SP-Packages/lando-pull
+      VERBOSE: true
     permissions:
       contents: read
       pull-requests: write
