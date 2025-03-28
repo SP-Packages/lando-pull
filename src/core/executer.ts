@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import mysql from 'mysql2';
 import { execSync, spawn } from 'child_process';
-import { Printer } from '@sp-packages/printer';
+import { Ora, Printer } from '@sp-packages/printer';
 import { PullConfig, PullOptions, SqlCondition } from './../types/types.js';
 
 export class Executer {
@@ -640,9 +640,10 @@ export class Executer {
   /**
    * Pull the database and files from the remote server.
    * @param options - The pull options
+   * @param spinner
    * @returns A promise that resolves when the pull operation completes
    */
-  async pull(options: PullOptions = {}) {
+  async pull(options: PullOptions = {}, spinner: Ora) {
     const startTime = Date.now();
     const { skipDb = false, skipFiles = false, debug = false } = options;
     let localTempFile, remoteTempFile;
@@ -652,23 +653,28 @@ export class Executer {
 
       if (!skipDb) {
         Printer.log('Pulling database...', 'subheader');
+        spinner.text = 'Pulling database...';
 
         // Create remote backup
         Printer.log('Creating remote database backup...', 'section');
+        spinner.text = 'Creating remote database backup...';
         remoteTempFile = await this.createRemoteDbBackup();
 
         // Copy backup locally
         Printer.log('Copying remote database backup...', 'section');
+        spinner.text = 'Copying remote database backup...';
         localTempFile = await this.copyRemoteBackup(remoteTempFile);
 
         // Import database
         Printer.log('Importing database...', 'section');
+        spinner.text = 'Importing database...';
         await this.importDatabase(localTempFile);
       }
 
       if (!skipFiles) {
         // Import Files
         Printer.log('Pulling files...', 'subheader');
+        spinner.text = 'Pulling files...';
         await this.importFiles();
       }
 
@@ -680,10 +686,12 @@ export class Executer {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      spinner.fail('Pull failed');
       Printer.log(`Pull failed: ${message}`, 'error');
       throw error;
     } finally {
       Printer.log('Cleaning up...', 'subheader');
+      spinner.text = 'Cleaning up...';
       await this.cleanup(debug, localTempFile, remoteTempFile)
         .then(() => !debug && Printer.log('Cleanup complete', 'success'))
         .catch((err) => Printer.error(`Cleanup failed: ${err}`));
@@ -691,8 +699,12 @@ export class Executer {
   }
 
   // Static utility method for quick usage
-  static async quickPull(config: PullConfig, options?: PullOptions) {
+  static async quickPull(
+    config: PullConfig,
+    spinner: Ora,
+    options?: PullOptions
+  ) {
     const puller = new Executer(config);
-    return puller.pull(options);
+    return puller.pull(options, spinner);
   }
 }

@@ -1,2 +1,2 @@
-import { Printer } from '@sp-packages/printer';
-export { Printer };
+import { Ora, Printer } from '@sp-packages/printer';
+export { Ora, Printer };
