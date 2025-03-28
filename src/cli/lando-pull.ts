@@ -13,13 +13,16 @@ export async function landoPull(
   options: PullOptions
 ): Promise<void> {
   Printer.log('Running Lando Pull', 'header');
+  const spinner = Printer.spinner('Running pull...').start();
 
   try {
-    const result = await Executer.quickPull(config, options);
+    const result = await Executer.quickPull(config, spinner, options);
+    spinner.succeed('Pull complete!');
     Printer.log('Summary', 'subheader');
     Printer.success(`Duration: ${result.duration} seconds`);
     Printer.success('Pull completed successfully');
   } catch (error) {
+    spinner.fail();
     Printer.error(`Pull failed: ${error}`);
     process.exit(1);
   }

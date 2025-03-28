@@ -46,6 +46,7 @@
       "husky",
       "semantic-release",
       "markdownlint-cli",
+      "@commitlint/cli",
       "@commitlint/config-conventional",
       "@semantic-release/changelog",
       "@semantic-release/commit-analyzer",
@@ -54,6 +55,8 @@
       "@semantic-release/npm",
       "@semantic-release/release-notes-generator",
       "@semantic-release/github",
+      "@sp-packages/depkit",
+      "@sp-packages/lintrc",
       "@types/node",
       "@vitest/coverage-v8"
     ]
@@ -64,7 +67,7 @@
     ]
   },
   "dependencies": {
-    "@sp-packages/printer": "^2.5.0",
+    "@sp-packages/printer": "^2.7.0",
     "commander": "^13.1.0",
     "fs-extra": "^11.3.0",
     "mysql2": "^3.14.0"
@@ -72,7 +75,7 @@
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",
     "@commitlint/config-conventional": "^19.8.0",
-    "@eslint/js": "^9.22.0",
+    "@eslint/js": "^9.23.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/exec": "^7.0.3",
@@ -80,8 +83,8 @@
     "@semantic-release/github": "^11.0.1",
     "@semantic-release/npm": "^12.0.1",
     "@semantic-release/release-notes-generator": "^14.0.3",
-    "@sp-packages/depkit": "^2.1.0",
-    "@sp-packages/lintrc": "^1.1.0",
+    "@sp-packages/depkit": "^2.2.0",
+    "@sp-packages/lintrc": "^1.4.0",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.13.10",
     "@vitest/coverage-v8": "^3.0.8",
@@ -90,9 +93,9 @@
     "cspell": "^8.17.5",
     "depcheck": "^1.4.7",
     "esbuild": "^0.25.1",
-    "eslint": "^9.22.0",
+    "eslint": "^9.23.0",
     "eslint-config-prettier": "^10.1.1",
-    "eslint-plugin-jsdoc": "^50.6.3",
+    "eslint-plugin-jsdoc": "^50.6.9",
     "eslint-plugin-prettier": "^5.2.3",
     "eslint-plugin-tsdoc": "^0.4.0",
     "globals": "^16.0.0",
@@ -102,18 +105,12 @@
     "prettier": "^3.5.3",
     "semantic-release": "^24.2.3",
     "typescript": "^5.8.2",
-    "typescript-eslint": "^8.26.0",
-    "vitest": "^3.0.8"
+    "typescript-eslint": "^8.28.0",
+    "vitest": "^3.0.9"
   },
   "scripts": {
     "build": "tsc && esbuild dist/**/*.js --minify --outdir=dist --allow-overwrite --tree-shaking=true --platform=node",
-    "commitlint": "commitlint --from=origin/main --to=HEAD --verbose",
-    "cspell": "cspell --no-progress --no-summary",
-    "eslint:fix": "eslint --fix",
-    "prepare": "husky install",
-    "prettier:write": "prettier --write",
-    "depkit": "npx depkit",
-    "lintrc": "npx lintrc",
+    "postinstall": "husky install",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage"

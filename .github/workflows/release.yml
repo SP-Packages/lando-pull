@@ -31,7 +31,5 @@ jobs:
   rebase:
     needs: prepare
     uses: SP-Packages/actions/.github/workflows/rebase-develop.yml@main
-    secrets:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     permissions:
       contents: write
