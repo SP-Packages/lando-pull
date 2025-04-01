@@ -17,12 +17,12 @@ export async function landoPull(
 
   try {
     const result = await Executer.quickPull(config, spinner, options);
-    spinner.succeed('Pull complete!');
+    spinner.clear();
     Printer.log('Summary', 'subheader');
     Printer.success(`Duration: ${result.duration} seconds`);
     Printer.success('Pull completed successfully');
   } catch (error) {
-    spinner.fail();
+    spinner.clear();
     Printer.error(`Pull failed: ${error}`);
     process.exit(1);
   }
