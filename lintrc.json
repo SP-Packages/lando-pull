@@ -18,6 +18,14 @@
       "ignoreFiles": ["composer.lock", "package-lock.json"],
       "priority": 8
     },
+    "DEPCHECK": {
+      "title": "DepCheck",
+      "type": "npm",
+      "command": "depcheck",
+      "behavior": "error",
+      "includeFiles": false,
+      "priority": 10
+    },
     "ESLINT": {
       "title": "ESLint",
       "type": "npm",
@@ -91,6 +99,6 @@
     "css": ["PRETTIER"],
     "scss": ["PRETTIER"],
     "less": ["PRETTIER"],
-    "*": ["CSPELL", "COMMITLINT"]
+    "*": ["CSPELL", "COMMITLINT", "DEPCHECK"]
   }
 }

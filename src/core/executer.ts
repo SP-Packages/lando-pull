@@ -695,6 +695,7 @@ export class Executer {
       await this.cleanup(debug, localTempFile, remoteTempFile)
         .then(() => !debug && Printer.log('Cleanup complete', 'success'))
         .catch((err) => Printer.error(`Cleanup failed: ${err}`));
+      spinner.stop();
     }
   }
 

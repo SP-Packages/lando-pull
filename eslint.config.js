@@ -1,8 +1,8 @@
 import globals from 'globals';
 import eslint from '@eslint/js';
+import tseslint from 'typescript-eslint';
 import tsdoc from 'eslint-plugin-tsdoc';
 import jsdocPlugin from 'eslint-plugin-jsdoc';
-import tseslint from 'typescript-eslint';
 import prettierPlugin from 'eslint-plugin-prettier';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
 

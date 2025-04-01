@@ -5,31 +5,32 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
 jobs:
-  analyze:
-    uses: SP-Packages/actions/.github/workflows/code-quality.yml@main
+  prepare:
+    uses: SP-Packages/actions/.github/workflows/code-quality.yml@v1.1.2
+    with:
+      VERBOSE: true
+
+  test:
+    needs: prepare
+    uses: SP-Packages/actions/.github/workflows/code-testing.yml@v1.1.2
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
-      slug: SP-Packages/lando-pull
-    permissions:
-      contents: read
-      pull-requests: write
+      SLUG: SP-Packages/lando-pull
 
-  prepare:
-    needs: analyze
-    uses: SP-Packages/actions/.github/workflows/semantic-release.yml@main
-
+  release:
+    needs: test
+    uses: SP-Packages/actions/.github/workflows/semantic-release.yml@v1.1.2
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
 
   rebase:
-    needs: prepare
-    uses: SP-Packages/actions/.github/workflows/rebase-develop.yml@main
-    permissions:
-      contents: write
+    needs: release
+    uses: SP-Packages/actions/.github/workflows/rebase-develop.yml@v1.1.2

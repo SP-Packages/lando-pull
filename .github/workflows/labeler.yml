@@ -1,19 +1,16 @@
 name: 'Pull Request Labeler'
+
 on:
   - pull_request_target
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
 jobs:
   labeler:
+    uses: SP-Packages/actions/.github/workflows/pr-labeler.yml@v1.1.2
     permissions:
       contents: read
       pull-requests: write
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Labeler
-        uses: actions/labeler@v5
-        with:
-          sync-labels: true

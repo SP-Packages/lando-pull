@@ -7,14 +7,21 @@ on:
       - main
       - develop
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
 jobs:
   prepare:
-    uses: SP-Packages/actions/.github/workflows/code-quality.yml@main
+    uses: SP-Packages/actions/.github/workflows/code-quality.yml@v1.1.2
+    with:
+      VERBOSE: true
+
+  test:
+    needs: prepare
+    uses: SP-Packages/actions/.github/workflows/code-testing.yml@v1.1.2
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
       SLUG: SP-Packages/lando-pull
-      VERBOSE: true
-    permissions:
-      contents: read
-      pull-requests: write

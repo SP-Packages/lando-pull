@@ -20,7 +20,7 @@ program
   )
   .option(
     '-c, --config <config>',
-    'Path to the configuration file (default: .landorc)'
+    'Path to the configuration file (default: landorc.json)'
   )
   .option('-d, --debug', 'Debug mode')
   .option('-q, --quiet', 'Disable output')
