@@ -20,7 +20,7 @@
 - 🔄 **Sync remote databases** to your local Lando environment.
 - 📂 **Sync remote files** with `rsync`.
 - 🔑 **Supports password & SSH key authentication**.
-- ⚙ **Customizable configuration** via `.landorc`.
+- ⚙ **Customizable configuration** via `landorc.json`.
 - 🚀 **Fast execution with minimal setup**.
 - 🏗 **Ideal for development workflows** with WordPress & Lando.
 
@@ -67,7 +67,7 @@ A CLI tool for syncing remote databases and files to your local Lando environmen
 
 Options:
   -V, --version           output the version number
-  -c, --config <config>   Path to the configuration file (default: .landorc)
+  -c, --config <config>   Path to the configuration file (default: landorc.json)
   -d, --debug             Debug mode
   -q, --quiet             Disable output
   -v, --verbose           Enable verbose logging
@@ -90,9 +90,9 @@ lando-pull --auth-method password --password my_secure_password
 
 ---
 
-## **⚙️ Configuration (`.landorc`)**
+## **⚙️ Configuration (`landorc.json`)**
 
-Lando Pull uses a configuration file (`.landorc`) to define remote connection details.
+Lando Pull uses a configuration file (`landorc.json`) to define remote connection details. By default, `Lando Pull` will look for a `landorc.json` or `.landorc.json` file in your project's root directory. You can also pass the custom path using --config parameter.
 
 ### **Example Configuration:**
 
