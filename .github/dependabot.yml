@@ -16,11 +16,6 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types: ['version-update:semver-patch']
-    groups:
-      dev-dependencies:
-        patterns:
-          - '*'
-        dependency-type: 'development'
 
   # ===========================
   # GitHub Actions Updates (Daily)
@@ -34,7 +29,6 @@ updates:
     labels:
       - 'dependencies'
       - 'github-actions'
-    versioning-strategy: increase
     ignore:
       - dependency-name: '*'
         update-types: ['version-update:semver-patch']
