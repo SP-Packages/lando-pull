@@ -88,7 +88,7 @@
     "@sp-packages/depkit": "^2.0.0",
     "@sp-packages/lintrc": "^1.0.0",
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^22.13.10",
+    "@types/node": "^22.14.1",
     "@vitest/coverage-v8": "^3.0.8",
     "codecov": "^3.8.3",
     "conventional-changelog-conventionalcommits": "^8.0.0",
