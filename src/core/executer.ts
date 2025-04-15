@@ -241,169 +241,373 @@ export class Executer {
    * Import the database backup locally.
    * @param localTempFile - The path to the local backup file
    * @param retries - The number of retries to attempt
+   *
+   * @returns A promise that resolves when the import is complete
    */
   private async importDatabase(
     localTempFile: string,
     retries: number = Executer.UNITS.IMPORT_RETRIES
-  ): Promise<void> {
-    const { dbHost, dbName, dbUser, dbPort, dbPassword } = this.config.local;
-    const escapedDbPassword = dbPassword.replace(/[$`"\\]/g, '\\$&');
+  ): Promise<string> {
+    // Try direct import first (decompress then import)
+    try {
+      Printer.log('Starting database import using direct method...');
+      const tempUncompressedFile = await this.directImport(localTempFile);
+      return tempUncompressedFile;
+    } catch (directError) {
+      const directErrorMsg =
+        directError instanceof Error
+          ? directError.message
+          : String(directError);
+      Printer.error(`Direct import failed: ${directErrorMsg}`);
+      Printer.log('Falling back to pipe method...', 'warning');
+    }
 
-    const importCommand = [
-      'mysql',
-      '-h',
-      dbHost,
-      '-P',
-      dbPort.toString(),
-      '-u',
-      dbUser,
-      `-p${escapedDbPassword}`,
-      dbName
-    ];
-
-    const attemptImport = (): Promise<void> => {
-      return new Promise((resolve, reject) => {
-        const importProcess = spawn('mysql', importCommand.slice(1), {
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
-        const buffers = { stdout: '', stderr: '' };
-
-        const gunzipProcess = spawn('gunzip', ['-c', localTempFile], {
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
-        const gunzipBuffers = { stdout: '', stderr: '' };
-
-        importProcess.stdout.on(
-          'data',
-          (data) => (buffers.stdout += data.toString())
-        );
-        importProcess.stderr.on(
-          'data',
-          (data) => (buffers.stderr += data.toString())
-        );
-
-        gunzipProcess.stderr.on(
-          'data',
-          (data) => (gunzipBuffers.stderr += data.toString())
-        );
-
-        // Pipe the decompressed SQL data into MySQL
-        const fileStream = fs.createReadStream(localTempFile);
-        fileStream.pipe(gunzipProcess.stdin);
-        gunzipProcess.stdout.pipe(importProcess.stdin);
-
-        const importTimeout = setTimeout(() => {
-          Printer.error(
-            'Database import timeout reached. Terminating processes...'
-          );
-          importProcess.kill('SIGKILL');
-          gunzipProcess.kill('SIGKILL');
-          fileStream.destroy();
-          const message = `${buffers.stdout}${buffers.stderr}`.trim();
-          if (message) Printer.error(message);
-          reject(new Error('Database import timed out'));
-        }, this.IMPORT_TIMEOUT_MS);
-
-        importProcess.on('close', (code) => {
-          clearTimeout(importTimeout);
-          const message = `${buffers.stdout}${buffers.stderr}`.trim();
-
-          if (code === 0) {
-            Printer.log('Database imported successfully', 'success');
-            Printer.log(message.trim());
-
-            Printer.log('Database updates...', 'section');
-            this.updateDatabaseValues()
-              .then(() => resolve())
-              .catch(reject);
-          } else {
-            Printer.error(`Exit code: ${code}`);
-            Printer.error(message.trim());
-            reject(new Error(`Database import failed with exit code ${code}`));
-          }
-        });
-
-        importProcess.on('error', (error) => {
-          clearTimeout(importTimeout);
-          Printer.error(
-            `Database import process error: ${error instanceof Error ? error.message : String(error)}`
-          );
-          reject(error);
-        });
-
-        gunzipProcess.on('close', (code) => {
-          if (code !== 0) {
-            reject(new Error(`Gunzip failed: ${gunzipBuffers.stderr.trim()}`));
-          }
-        });
-
-        gunzipProcess.on('error', (error) => {
-          Printer.error(
-            `Gunzip process error: ${error instanceof Error ? error.message : String(error)}`
-          );
-          reject(error);
-        });
-
-        // Handle stream errors
-        fileStream.on('error', (error) => {
-          Printer.error(
-            `File stream error: ${error instanceof Error ? error.message : String(error)}`
-          );
-          reject(error);
-        });
-
-        gunzipProcess.stdin.on('error', (error) => {
-          Printer.error(
-            `Gunzip stdin error: ${error instanceof Error ? error.message : String(error)}`
-          );
-          reject(error);
-        });
-
-        gunzipProcess.stdout.on('error', (error) => {
-          Printer.error(
-            `Gunzip stdout error: ${error instanceof Error ? error.message : String(error)}`
-          );
-          reject(error);
-        });
-
-        importProcess.stdin.on('error', (error) => {
-          Printer.error(
-            `MySQL stdin error: ${error instanceof Error ? error.message : String(error)}`
-          );
-          reject(error);
-        });
-
-        importProcess.stdout.on('error', (error) => {
-          Printer.error(
-            `MySQL stdout error: ${error instanceof Error ? error.message : String(error)}`
-          );
-          reject(error);
-        });
-
-        // Close stdin streams properly when file reading is done
-        fileStream.on('end', () => {
-          gunzipProcess.stdin.end();
-        });
-
-        gunzipProcess.stdout.on('end', () => {
-          importProcess.stdin.end();
-        });
-      });
-    };
-
+    // Fall back to gunzip pipe method if direct import fails
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        await attemptImport();
-        return; // If successful, exit the function
+        Printer.log(`Pipe method attempt ${attempt}/${retries}...`);
+        await this.pipeImport(localTempFile);
+        Printer.log(
+          'Database import completed successfully with pipe method',
+          'success'
+        );
+        return localTempFile;
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        Printer.error(`Pipe import attempt ${attempt} failed: ${errorMessage}`);
+
         if (attempt < retries) {
-          Printer.error(`Attempt ${attempt} failed. Retrying...`);
+          Printer.log(`Retrying...`, 'warning');
         } else {
           Printer.error(`All ${retries} attempts failed.`);
-          throw error;
+          throw new Error(
+            `Database import failed after all attempts: ${errorMessage}`
+          );
         }
       }
     }
+    return localTempFile; // Add default return
+  }
+
+  /**
+   * Import database using the direct method (decompress first, then import).
+   * @param localTempFile - The path to the compressed backup file
+   *
+   * @returns A promise that resolves with the path to the uncompressed SQL file
+   */
+  private async directImport(localTempFile: string): Promise<string> {
+    const { dbHost, dbName, dbUser, dbPort, dbPassword } = this.config.local;
+
+    // Create a temporary uncompressed file with unique name
+    const tempUncompressedFile = `${localTempFile.replace('.gz', '')}.${Date.now()}.sql`;
+
+    Printer.log(`Direct Import`, 'section');
+    // eslint-disable-next-line no-useless-catch
+    try {
+      // Step 1: Decompress the file
+      await this.decompressFile(localTempFile, tempUncompressedFile);
+
+      // Step 2: Import the uncompressed file
+      await this.importSqlFile(
+        tempUncompressedFile,
+        dbHost,
+        dbPort,
+        dbUser,
+        dbPassword,
+        dbName
+      );
+
+      // Step 3: Update database values
+      await this.updateDatabaseValues();
+
+      Printer.log('Database Pull Summary', 'section');
+      return tempUncompressedFile;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Decompress a gzipped file to a destination path.
+   * @param sourceFile - The source gzipped file
+   * @param destFile - The destination uncompressed file
+   */
+  private async decompressFile(
+    sourceFile: string,
+    destFile: string
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const gunzip = spawn('gunzip', ['-c', sourceFile]);
+      const writeStream = fs.createWriteStream(destFile);
+
+      let gunzipError: Error | null = null;
+
+      gunzip.stdout.pipe(writeStream);
+
+      gunzip.stderr.on('data', (data) => {
+        Printer.error(`Gunzip stderr: ${data.toString()}`);
+      });
+
+      gunzip.on('error', (error) => {
+        gunzipError = error;
+        Printer.error(`Gunzip process error: ${error.message}`);
+        reject(error);
+      });
+
+      writeStream.on('error', (error) => {
+        Printer.error(`Write stream error: ${error.message}`);
+        reject(error);
+      });
+
+      writeStream.on('finish', () => {
+        if (!gunzipError) {
+          Printer.log('File decompressed successfully', 'success');
+          resolve();
+        }
+      });
+
+      gunzip.on('close', (code) => {
+        if (code !== 0 && !gunzipError) {
+          const error = new Error(`Gunzip process exited with code ${code}`);
+          Printer.error(error.message);
+          reject(error);
+        }
+      });
+    });
+  }
+
+  /**
+   * Import an SQL file into the database.
+   * @param sqlFile - The SQL file to import
+   * @param host - The database host
+   * @param port - The database port
+   * @param user - The database user
+   * @param password - The database password
+   * @param database - The database name
+   */
+  private async importSqlFile(
+    sqlFile: string,
+    host: string,
+    port: number,
+    user: string,
+    password: string,
+    database: string
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const escapedPassword = password.replace(/[$`"\\]/g, '\\$&');
+
+      const mysqlProcess = spawn('mysql', [
+        '-h',
+        host,
+        '-P',
+        port.toString(),
+        '-u',
+        user,
+        `-p${escapedPassword}`,
+        database
+      ]);
+
+      const fileStream = fs.createReadStream(sqlFile);
+      const buffers = { stdout: '', stderr: '' };
+
+      mysqlProcess.stdout.on('data', (data) => {
+        buffers.stdout += data.toString();
+      });
+
+      mysqlProcess.stderr.on('data', (data) => {
+        buffers.stderr += data.toString();
+      });
+
+      fileStream.pipe(mysqlProcess.stdin);
+
+      const importTimeout = setTimeout(() => {
+        Printer.error('Database import timed out');
+        mysqlProcess.kill('SIGKILL');
+        fileStream.destroy();
+        reject(new Error('Database import timed out'));
+      }, this.IMPORT_TIMEOUT_MS);
+
+      mysqlProcess.on('close', (code) => {
+        clearTimeout(importTimeout);
+        const message = `${buffers.stdout}${buffers.stderr}`.trim();
+
+        if (code === 0) {
+          if (message) Printer.log(message.trim());
+          Printer.log('Database imported successfully', 'success'); // Added success message
+          resolve();
+        } else {
+          Printer.error(`MySQL exited with code ${code}`);
+          if (message) Printer.error(message.trim());
+          reject(new Error(`MySQL import failed with exit code ${code}`));
+        }
+      });
+
+      mysqlProcess.on('error', (error) => {
+        clearTimeout(importTimeout);
+        Printer.error(`MySQL process error: ${error.message}`);
+        reject(error);
+      });
+
+      fileStream.on('error', (error) => {
+        clearTimeout(importTimeout);
+        Printer.error(`File read error: ${error.message}`);
+        reject(error);
+      });
+
+      mysqlProcess.stdin.on('error', (error) => {
+        clearTimeout(importTimeout);
+        Printer.error(`MySQL stdin error: ${error.message}`);
+        reject(error);
+      });
+
+      fileStream.on('end', () => {
+        mysqlProcess.stdin.end();
+      });
+    });
+  }
+
+  /**
+   * Import database using the pipe method (gunzip piped directly to mysql).
+   * @param localTempFile - The path to the compressed backup file
+   */
+  private async pipeImport(localTempFile: string): Promise<void> {
+    const { dbHost, dbName, dbUser, dbPort, dbPassword } = this.config.local;
+    const escapedDbPassword = dbPassword.replace(/[$`"\\]/g, '\\$&');
+
+    return new Promise((resolve, reject) => {
+      let importSucceeded = false;
+
+      // MySQL import process
+      const mysqlProcess = spawn('mysql', [
+        '-h',
+        dbHost,
+        '-P',
+        dbPort.toString(),
+        '-u',
+        dbUser,
+        `-p${escapedDbPassword}`,
+        dbName
+      ]);
+
+      // Gunzip process
+      const gunzip = spawn('gunzip', ['-c', localTempFile]);
+
+      const buffers = {
+        mysqlStdout: '',
+        mysqlStderr: '',
+        gunzipStderr: ''
+      };
+
+      // Collect output
+      mysqlProcess.stdout.on('data', (data) => {
+        buffers.mysqlStdout += data.toString();
+      });
+
+      mysqlProcess.stderr.on('data', (data) => {
+        buffers.mysqlStderr += data.toString();
+      });
+
+      gunzip.stderr.on('data', (data) => {
+        buffers.gunzipStderr += data.toString();
+      });
+
+      // Pipe gunzip output to mysql input
+      gunzip.stdout.pipe(mysqlProcess.stdin);
+
+      // Set timeout
+      const importTimeout = setTimeout(() => {
+        Printer.error('Database import timed out');
+        mysqlProcess.kill('SIGKILL');
+        gunzip.kill('SIGKILL');
+        reject(new Error('Database import timed out'));
+      }, this.IMPORT_TIMEOUT_MS);
+
+      // Handle MySQL process completion
+      mysqlProcess.on('close', (code) => {
+        clearTimeout(importTimeout);
+        const message = `${buffers.mysqlStdout}${buffers.mysqlStderr}`.trim();
+
+        if (code === 0) {
+          if (message) Printer.log(message.trim());
+          importSucceeded = true;
+
+          // Close gunzip process if still running
+          try {
+            gunzip.kill();
+          } catch {
+            // Ignore errors when killing process
+          }
+
+          // Update database values after successful import
+          this.updateDatabaseValues()
+            .then(() => resolve())
+            .catch((updateError) => {
+              Printer.error(`Database update failed: ${updateError.message}`);
+              resolve(); // Continue even if update fails
+            });
+        } else {
+          Printer.error(`MySQL exited with code ${code}`);
+          if (message) Printer.error(message.trim());
+          reject(new Error(`MySQL import failed with exit code ${code}`));
+        }
+      });
+
+      // Handle gunzip process completion
+      gunzip.on('close', (code) => {
+        if (importSucceeded) {
+          // If MySQL already succeeded, we can ignore gunzip exit code
+          return;
+        }
+
+        if (code !== 0) {
+          Printer.error(`Gunzip exited with code ${code}`);
+          const message = buffers.gunzipStderr.trim();
+          if (message) Printer.error(message);
+          reject(new Error(`Gunzip failed with exit code ${code}`));
+        }
+      });
+
+      // Error handlers
+      mysqlProcess.on('error', (error) => {
+        clearTimeout(importTimeout);
+        Printer.error(`MySQL process error: ${error.message}`);
+        reject(error);
+      });
+
+      gunzip.on('error', (error) => {
+        // If MySQL already succeeded, gunzip errors don't matter
+        if (importSucceeded) return;
+
+        Printer.error(`Gunzip process error: ${error.message}`);
+        reject(error);
+      });
+
+      // Handle stream errors with special EPIPE handling
+      gunzip.stdout.on('error', (error) => {
+        if (importSucceeded) {
+          Printer.log(
+            'Ignoring gunzip stdout error after successful import',
+            'warning'
+          );
+          return;
+        }
+        Printer.error(`Gunzip stdout error: ${error.message}`);
+        reject(error);
+      });
+
+      mysqlProcess.stdin.on('error', (error) => {
+        if (importSucceeded && error.message.includes('EPIPE')) {
+          Printer.log(
+            'Ignoring EPIPE error after successful import',
+            'warning'
+          );
+          return;
+        }
+        Printer.error(`MySQL stdin error: ${error.message}`);
+        reject(error);
+      });
+    });
   }
 
   /**
@@ -413,6 +617,8 @@ export class Executer {
     const { dbHost, dbName, dbUser, dbPort, dbPassword, databaseUpdates } =
       this.config.local;
     const escapedDbPassword = dbPassword.replace(/[$`"\\]/g, '\\$&');
+
+    Printer.log('Database updates', 'section');
 
     if (!databaseUpdates || databaseUpdates.length === 0) {
       Printer.log('No database updates configured, skipping', 'warning');
@@ -549,11 +755,13 @@ export class Executer {
    * Clean up temporary files and directories.
    * @param debug - Whether to keep the local backup in debug mode
    * @param localTempFile - The path to the local backup file
+   * @param tempUncompressedFile - The path to the temporary uncompressed file
    * @param remoteTempFile - The path to the remote backup file
    */
   private async cleanup(
     debug: boolean,
     localTempFile?: string,
+    tempUncompressedFile?: string,
     remoteTempFile?: string
   ): Promise<void> {
     const cleanupTasks = [
@@ -565,9 +773,34 @@ export class Executer {
               try {
                 if (localTempFile && (await fs.pathExists(localTempFile))) {
                   fs.unlink(localTempFile);
+                  Printer.log('Local backup cleaned up', 'success');
                 }
               } catch (error) {
                 Printer.error(`Failed to remove local backup: ${error}`);
+              }
+            })()
+          ]),
+
+      // Temp UncompressedFile cleanup (if not in debug mode)
+      ...(debug
+        ? []
+        : [
+            (async () => {
+              try {
+                if (
+                  tempUncompressedFile &&
+                  (await fs.pathExists(tempUncompressedFile))
+                ) {
+                  fs.unlink(tempUncompressedFile);
+                  Printer.log(
+                    'Temporary uncompressed file cleaned up',
+                    'success'
+                  );
+                }
+              } catch (error) {
+                Printer.error(
+                  `Failed to remove Temporary Uncompressed File: ${error}`
+                );
               }
             })()
           ]),
@@ -646,7 +879,7 @@ export class Executer {
   async pull(options: PullOptions = {}, spinner: Ora) {
     const startTime = Date.now();
     const { skipDb = false, skipFiles = false, debug = false } = options;
-    let localTempFile, remoteTempFile;
+    let localTempFile, tempUncompressedFile, remoteTempFile;
     let dbSuccess = true;
     let filesSuccess = true;
 
@@ -672,7 +905,7 @@ export class Executer {
           // Import database
           Printer.log('Importing database...', 'section');
           spinner.text = 'Importing database...';
-          await this.importDatabase(localTempFile);
+          tempUncompressedFile = await this.importDatabase(localTempFile);
 
           Printer.log('Database pull completed successfully', 'success');
         } catch (dbError) {
@@ -719,7 +952,12 @@ export class Executer {
     } finally {
       Printer.log('Cleaning up...', 'subheader');
       spinner.text = 'Cleaning up...';
-      await this.cleanup(debug, localTempFile, remoteTempFile)
+      await this.cleanup(
+        debug,
+        localTempFile,
+        tempUncompressedFile,
+        remoteTempFile
+      )
         .then(() => !debug && Printer.log('Cleanup complete', 'success'))
         .catch((err) => Printer.error(`Cleanup failed: ${err}`));
       spinner.stop();
