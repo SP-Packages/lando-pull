@@ -19,8 +19,20 @@ export async function landoPull(
     const result = await Executer.quickPull(config, spinner, options);
     spinner.clear();
     Printer.log('Summary', 'subheader');
-    Printer.success(`Duration: ${result.duration} seconds`);
-    Printer.success('Pull completed successfully');
+
+    if (
+      (options.skipDb || result.dbSuccess) &&
+      (options.skipFiles || result.filesSuccess)
+    ) {
+      Printer.success(`Duration: ${result.duration} seconds`);
+      Printer.success('Pull completed successfully');
+    } else if (result.dbSuccess || result.filesSuccess) {
+      Printer.warning(`Duration: ${result.duration} seconds`);
+      Printer.warning('Pull completed with some errors');
+    } else {
+      Printer.error(`Duration: ${result.duration} seconds`);
+      Printer.error('Pull failed completely', 'error');
+    }
   } catch (error) {
     spinner.clear();
     Printer.error(`Pull failed: ${error}`);

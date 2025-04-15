@@ -647,44 +647,71 @@ export class Executer {
     const startTime = Date.now();
     const { skipDb = false, skipFiles = false, debug = false } = options;
     let localTempFile, remoteTempFile;
+    let dbSuccess = true;
+    let filesSuccess = true;
+
     try {
       // Validate dependencies
       this.validateDependencies();
 
       if (!skipDb) {
-        Printer.log('Pulling database...', 'subheader');
-        spinner.text = 'Pulling database...';
+        try {
+          Printer.log('Pulling database...', 'subheader');
+          spinner.text = 'Pulling database...';
 
-        // Create remote backup
-        Printer.log('Creating remote database backup...', 'section');
-        spinner.text = 'Creating remote database backup...';
-        remoteTempFile = await this.createRemoteDbBackup();
+          // Create remote backup
+          Printer.log('Creating remote database backup...', 'section');
+          spinner.text = 'Creating remote database backup...';
+          remoteTempFile = await this.createRemoteDbBackup();
 
-        // Copy backup locally
-        Printer.log('Copying remote database backup...', 'section');
-        spinner.text = 'Copying remote database backup...';
-        localTempFile = await this.copyRemoteBackup(remoteTempFile);
+          // Copy backup locally
+          Printer.log('Copying remote database backup...', 'section');
+          spinner.text = 'Copying remote database backup...';
+          localTempFile = await this.copyRemoteBackup(remoteTempFile);
 
-        // Import database
-        Printer.log('Importing database...', 'section');
-        spinner.text = 'Importing database...';
-        await this.importDatabase(localTempFile);
+          // Import database
+          Printer.log('Importing database...', 'section');
+          spinner.text = 'Importing database...';
+          await this.importDatabase(localTempFile);
+
+          Printer.log('Database pull completed successfully', 'success');
+        } catch (dbError) {
+          dbSuccess = false;
+          const message =
+            dbError instanceof Error ? dbError.message : String(dbError);
+          Printer.log(`Database pull failed: ${message}`, 'error');
+        }
       }
 
       if (!skipFiles) {
-        // Import Files
-        Printer.log('Pulling files...', 'subheader');
-        spinner.text = 'Pulling files...';
-        await this.importFiles();
+        try {
+          // Import Files
+          Printer.log('Pulling files...', 'subheader');
+          spinner.text = 'Pulling files...';
+          await this.importFiles();
+
+          Printer.log('Files pull completed successfully', 'success');
+        } catch (filesError) {
+          filesSuccess = false;
+          const message =
+            filesError instanceof Error
+              ? filesError.message
+              : String(filesError);
+          Printer.log(`Files pull failed: ${message}`, 'error');
+        }
       }
 
       const duration = (Date.now() - startTime) / Executer.UNITS.MS_PER_SECOND;
 
       return {
-        success: true,
+        success: dbSuccess && filesSuccess,
+        partialSuccess: dbSuccess || filesSuccess,
+        dbSuccess,
+        filesSuccess,
         duration
       };
     } catch (error) {
+      // This should only trigger for dependency validation errors
       const message = error instanceof Error ? error.message : String(error);
       spinner.fail('Pull failed');
       Printer.log(`Pull failed: ${message}`, 'error');
