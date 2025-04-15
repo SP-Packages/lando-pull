@@ -1,34 +1,38 @@
 version: 2
 updates:
   # ===========================
-  # NPM Updates (Daily)
+  # NPM Updates (Weekly)
   # ===========================
   - package-ecosystem: 'npm'
     directory: '/'
     schedule:
-      interval: 'daily'
+      interval: 'weekly'
     commit-message:
       prefix: 'build(npm): [skip ci]'
     labels:
       - 'dependencies'
       - 'npm'
     versioning-strategy: increase
-    ignore:
-      - dependency-name: '*'
-        update-types: ['version-update:semver-patch']
+    groups:
+      dev-dependencies:
+        patterns:
+          - '*'
+        dependency-type: 'development'
 
   # ===========================
-  # GitHub Actions Updates (Daily)
+  # GitHub Actions Updates (Weekly)
   # ===========================
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
-      interval: 'daily'
+      interval: 'weekly'
     commit-message:
       prefix: 'build(actions): [skip ci]'
     labels:
       - 'dependencies'
       - 'github-actions'
-    ignore:
-      - dependency-name: '*'
-        update-types: ['version-update:semver-patch']
+    groups:
+      dev-dependencies:
+        patterns:
+          - '*'
+        dependency-type: 'development'
