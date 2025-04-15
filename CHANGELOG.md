@@ -1,3 +1,13 @@
+## [1.2.2](https://github.com/SP-Packages/lando-pull/compare/v1.2.1...v1.2.2) (2025-04-15)
+
+### Bug Fixes
+
+* **dependencies:** update dependencies ([de3b2cf](https://github.com/SP-Packages/lando-pull/commit/de3b2cfb9415bd915ee0d57e9fffd55f79c65d95))
+* **executer:** enhance database import methods and error handling ([07dd0d8](https://github.com/SP-Packages/lando-pull/commit/07dd0d8d6943f98e4e92dda9a20eccd76dea23bd))
+* **executer:** improve error handling and success reporting in pull ([329d2fb](https://github.com/SP-Packages/lando-pull/commit/329d2fb8ecd98e4e57ff063b29d1ff9ca761b9b2))
+* **vitest:** update coverage thresholds to zero for all metrics ([b2ee4f0](https://github.com/SP-Packages/lando-pull/commit/b2ee4f02d20ce953470c4f3355eb7a04fd5cd524))
+* **workflows:** update action versions and adjust permissions ([201d685](https://github.com/SP-Packages/lando-pull/commit/201d685dd30547cff4ce3febd75b70489267bcef))
+
 ## [1.2.1](https://github.com/SP-Packages/lando-pull/compare/v1.2.0...v1.2.1) (2025-04-01)
 
 ### Bug Fixes
