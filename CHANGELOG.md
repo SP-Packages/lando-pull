@@ -1,3 +1,14 @@
+## [1.3.0](https://github.com/SP-Packages/lando-pull/compare/v1.2.2...v1.3.0) (2025-04-17)
+
+### Features
+
+* **config:** add function to retrieve database port from Lando info ([cdcb77e](https://github.com/SP-Packages/lando-pull/commit/cdcb77e1eaa13e0e1e8ecbf6c79c3dbf744ad0f0))
+
+### Bug Fixes
+
+* **config:** update getDatabasePort and readConfig to accept options ([e594e09](https://github.com/SP-Packages/lando-pull/commit/e594e09ec2065302071ead9786d55061c81bfd0d))
+* **labeler:** update permissions for pull request labeler workflow ([6dc8de0](https://github.com/SP-Packages/lando-pull/commit/6dc8de0bf8a6b2f673f46e3cd70edaba5c9e523b))
+
 ## [1.2.2](https://github.com/SP-Packages/lando-pull/compare/v1.2.1...v1.2.2) (2025-04-15)
 
 ### Bug Fixes
