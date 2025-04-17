@@ -98,6 +98,7 @@ export interface PullConfig {
  * @param quiet - Suppress all non-error output when true
  */
 export interface PullOptions {
+  config?: string;
   debug?: boolean;
   skipDb?: boolean;
   skipFiles?: boolean;

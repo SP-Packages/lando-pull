@@ -6,13 +6,15 @@ import { Printer } from '../utils/logger.js';
 import { existsSync, writeFileSync } from 'fs';
 import { execSync } from 'child_process';
 import { DEFAULT_CONFIG } from '../constants.js';
+import { PullOptions } from '../types/types.js';
 
 /**
  *
  * Get the database port from Lando info command.
+ * @param options - The command line options
  * @returns The database port or null if not found
  */
-function getDatabasePort(): string | null {
+function getDatabasePort(options: PullOptions): string | null {
   try {
     // Execute lando info command and capture output
     const landoInfo = execSync('lando info', { encoding: 'utf-8' });
@@ -62,10 +64,9 @@ function getDatabasePort(): string | null {
         const portIndex = landoInfo.indexOf('port:', externalConnIndex);
         if (portIndex !== -1) {
           // Extract the text after "port:" and before the next comma or closing bracket
-          const portText = landoInfo.substring(
-            portIndex + 5,
-            landoInfo.indexOf('}', portIndex)
-          );
+          const end = landoInfo.indexOf('}', portIndex);
+          if (end === -1) return null;
+          const portText = landoInfo.substring(portIndex + 5, end);
           const port = portText.trim().replace(/[^0-9]/g, '');
           Printer.log(`Found database port using string extraction: ${port}`);
           // Use the port as needed
@@ -76,7 +77,10 @@ function getDatabasePort(): string | null {
       Printer.error('Could not find database port in lando info output');
     } catch (parseError) {
       Printer.error(`Failed to extract database port:`, parseError);
-      Printer.log(`Raw Lando info: ${landoInfo}`);
+
+      if (options.debug) {
+        Printer.log(`Raw Lando info: ${landoInfo.slice(0, 200)}`);
+      }
     }
   } catch (executionError) {
     Printer.error(
@@ -104,10 +108,11 @@ function askQuestion(query: string): Promise<string> {
 
 /**
  * Read the configuration file.
- * @param configPath - Path to the configuration file
+ * @param options - The command line options
  * @returns The configuration object
  */
-export async function readConfig(configPath?: string): Promise<PullConfig> {
+export async function readConfig(options: PullOptions): Promise<PullConfig> {
+  const configPath = options.config || null;
   const defaultConfigFileName = 'landorc.json';
   const possibleConfigFiles = ['.landorc', 'landorc.json', '.landorc.json'];
   let resolvedPath = configPath ? path.resolve(configPath) : null;
@@ -222,18 +227,18 @@ export async function readConfig(configPath?: string): Promise<PullConfig> {
       }
     }
 
-    if (config.local.dbPort === null) {
+    if (config.local.dbPort === null || config.local.dbPort === undefined) {
       Printer.log(
         'Database port not found in config. Trying to get it from Lando info...',
         'warning'
       );
-      config.local.dbPort = getDatabasePort();
-      if (!config.local.dbPort) {
-        Printer.error(
+      const detectedPort = getDatabasePort(options);
+      if (!detectedPort) {
+        throw new Error(
           'Database port not found in config or Lando info. Please set it manually.'
         );
-        process.exit(1);
       }
+      config.local.dbPort = Number(detectedPort);
     }
 
     return config;
