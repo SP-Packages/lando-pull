@@ -4,7 +4,88 @@ import { PullConfig } from '../types/types.js';
 import { createInterface } from 'readline';
 import { Printer } from '../utils/logger.js';
 import { existsSync, writeFileSync } from 'fs';
+import { execSync } from 'child_process';
 import { DEFAULT_CONFIG } from '../constants.js';
+
+/**
+ *
+ * Get the database port from Lando info command.
+ * @returns The database port or null if not found
+ */
+function getDatabasePort(): string | null {
+  try {
+    // Execute lando info command and capture output
+    const landoInfo = execSync('lando info', { encoding: 'utf-8' });
+
+    if (!landoInfo || landoInfo.trim() === '') {
+      Printer.error('Lando info returned empty response');
+      return null;
+    }
+
+    // Since we know the output isn't valid JSON, let's try to extract the port directly
+    try {
+      // First approach: Try to convert to valid JSON by wrapping in curly braces
+      const jsonString = `{${landoInfo.replace(/'/g, '"')}}`;
+      try {
+        const info = JSON.parse(jsonString);
+        Printer.log(`Parsed Lando info successfully`);
+
+        // Look for the database service
+        const databaseService = info.find(
+          (service: { service: string }) => service.service === 'database'
+        );
+        if (databaseService && databaseService.external_connection) {
+          const port = databaseService.external_connection.port;
+          Printer.log(`Found database port: ${port}`);
+          // Use the port as needed
+          return port;
+        }
+      } catch {
+        // JSON approach failed, fall back to regex extraction
+        Printer.log('JSON parsing failed, using regex extraction instead');
+      }
+
+      // Second approach: Use regex to extract the port directly
+      const portMatch = landoInfo.match(
+        /external_connection:.*?port:\s*'(\d+)'/
+      );
+      if (portMatch && portMatch[1]) {
+        const port = portMatch[1];
+        Printer.log(`Found database port using regex: ${port}`);
+        // Use the port as needed
+        return port;
+      }
+
+      // Third approach: Manual search and extraction
+      const externalConnIndex = landoInfo.indexOf('external_connection:');
+      if (externalConnIndex !== -1) {
+        const portIndex = landoInfo.indexOf('port:', externalConnIndex);
+        if (portIndex !== -1) {
+          // Extract the text after "port:" and before the next comma or closing bracket
+          const portText = landoInfo.substring(
+            portIndex + 5,
+            landoInfo.indexOf('}', portIndex)
+          );
+          const port = portText.trim().replace(/[^0-9]/g, '');
+          Printer.log(`Found database port using string extraction: ${port}`);
+          // Use the port as needed
+          return port;
+        }
+      }
+
+      Printer.error('Could not find database port in lando info output');
+    } catch (parseError) {
+      Printer.error(`Failed to extract database port:`, parseError);
+      Printer.log(`Raw Lando info: ${landoInfo}`);
+    }
+  } catch (executionError) {
+    Printer.error(
+      `Failed to get Lando info: ${executionError instanceof Error ? executionError.message : String(executionError)}`
+    );
+  }
+
+  return null;
+}
 
 /**
  * Asynchronously ask a question in the console.
@@ -101,7 +182,6 @@ export async function readConfig(configPath?: string): Promise<PullConfig> {
       dbName: 'string',
       dbUser: 'string',
       dbPassword: 'string',
-      dbPort: 'number',
       localFiles: 'string',
       tempFolder: 'string'
     };
@@ -139,6 +219,20 @@ export async function readConfig(configPath?: string): Promise<PullConfig> {
         throw new Error(
           `Invalid configuration: 'local.${field}' must be a ${type}`
         );
+      }
+    }
+
+    if (config.local.dbPort === null) {
+      Printer.log(
+        'Database port not found in config. Trying to get it from Lando info...',
+        'warning'
+      );
+      config.local.dbPort = getDatabasePort();
+      if (!config.local.dbPort) {
+        Printer.error(
+          'Database port not found in config or Lando info. Please set it manually.'
+        );
+        process.exit(1);
       }
     }
 
