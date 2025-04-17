@@ -54,7 +54,7 @@ program
 
     let config: PullConfig;
     try {
-      config = await readConfig(options.config);
+      config = await readConfig(options);
 
       if (options.authMethod) {
         if (!['password', 'key'].includes(options.authMethod)) {

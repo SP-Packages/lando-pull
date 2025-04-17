@@ -4,7 +4,92 @@ import { PullConfig } from '../types/types.js';
 import { createInterface } from 'readline';
 import { Printer } from '../utils/logger.js';
 import { existsSync, writeFileSync } from 'fs';
+import { execSync } from 'child_process';
 import { DEFAULT_CONFIG } from '../constants.js';
+import { PullOptions } from '../types/types.js';
+
+/**
+ *
+ * Get the database port from Lando info command.
+ * @param options - The command line options
+ * @returns The database port or null if not found
+ */
+function getDatabasePort(options: PullOptions): string | null {
+  try {
+    // Execute lando info command and capture output
+    const landoInfo = execSync('lando info', { encoding: 'utf-8' });
+
+    if (!landoInfo || landoInfo.trim() === '') {
+      Printer.error('Lando info returned empty response');
+      return null;
+    }
+
+    // Since we know the output isn't valid JSON, let's try to extract the port directly
+    try {
+      // First approach: Try to convert to valid JSON by wrapping in curly braces
+      const jsonString = `{${landoInfo.replace(/'/g, '"')}}`;
+      try {
+        const info = JSON.parse(jsonString);
+        Printer.log(`Parsed Lando info successfully`);
+
+        // Look for the database service
+        const databaseService = info.find(
+          (service: { service: string }) => service.service === 'database'
+        );
+        if (databaseService && databaseService.external_connection) {
+          const port = databaseService.external_connection.port;
+          Printer.log(`Found database port: ${port}`);
+          // Use the port as needed
+          return port;
+        }
+      } catch {
+        // JSON approach failed, fall back to regex extraction
+        Printer.log('JSON parsing failed, using regex extraction instead');
+      }
+
+      // Second approach: Use regex to extract the port directly
+      const portMatch = landoInfo.match(
+        /external_connection:.*?port:\s*'(\d+)'/
+      );
+      if (portMatch && portMatch[1]) {
+        const port = portMatch[1];
+        Printer.log(`Found database port using regex: ${port}`);
+        // Use the port as needed
+        return port;
+      }
+
+      // Third approach: Manual search and extraction
+      const externalConnIndex = landoInfo.indexOf('external_connection:');
+      if (externalConnIndex !== -1) {
+        const portIndex = landoInfo.indexOf('port:', externalConnIndex);
+        if (portIndex !== -1) {
+          // Extract the text after "port:" and before the next comma or closing bracket
+          const end = landoInfo.indexOf('}', portIndex);
+          if (end === -1) return null;
+          const portText = landoInfo.substring(portIndex + 5, end);
+          const port = portText.trim().replace(/[^0-9]/g, '');
+          Printer.log(`Found database port using string extraction: ${port}`);
+          // Use the port as needed
+          return port;
+        }
+      }
+
+      Printer.error('Could not find database port in lando info output');
+    } catch (parseError) {
+      Printer.error(`Failed to extract database port:`, parseError);
+
+      if (options.debug) {
+        Printer.log(`Raw Lando info: ${landoInfo.slice(0, 200)}`);
+      }
+    }
+  } catch (executionError) {
+    Printer.error(
+      `Failed to get Lando info: ${executionError instanceof Error ? executionError.message : String(executionError)}`
+    );
+  }
+
+  return null;
+}
 
 /**
  * Asynchronously ask a question in the console.
@@ -23,10 +108,11 @@ function askQuestion(query: string): Promise<string> {
 
 /**
  * Read the configuration file.
- * @param configPath - Path to the configuration file
+ * @param options - The command line options
  * @returns The configuration object
  */
-export async function readConfig(configPath?: string): Promise<PullConfig> {
+export async function readConfig(options: PullOptions): Promise<PullConfig> {
+  const configPath = options.config || null;
   const defaultConfigFileName = 'landorc.json';
   const possibleConfigFiles = ['.landorc', 'landorc.json', '.landorc.json'];
   let resolvedPath = configPath ? path.resolve(configPath) : null;
@@ -101,7 +187,6 @@ export async function readConfig(configPath?: string): Promise<PullConfig> {
       dbName: 'string',
       dbUser: 'string',
       dbPassword: 'string',
-      dbPort: 'number',
       localFiles: 'string',
       tempFolder: 'string'
     };
@@ -140,6 +225,20 @@ export async function readConfig(configPath?: string): Promise<PullConfig> {
           `Invalid configuration: 'local.${field}' must be a ${type}`
         );
       }
+    }
+
+    if (config.local.dbPort === null || config.local.dbPort === undefined) {
+      Printer.log(
+        'Database port not found in config. Trying to get it from Lando info...',
+        'warning'
+      );
+      const detectedPort = getDatabasePort(options);
+      if (!detectedPort) {
+        throw new Error(
+          'Database port not found in config or Lando info. Please set it manually.'
+        );
+      }
+      config.local.dbPort = Number(detectedPort);
     }
 
     return config;
