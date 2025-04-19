@@ -44,7 +44,10 @@ function getDatabasePort(options: PullOptions): string | null {
         }
       } catch {
         // JSON approach failed, fall back to regex extraction
-        Printer.log('JSON parsing failed, using regex extraction instead');
+        Printer.log(
+          'JSON parsing failed, using regex extraction instead',
+          'warning'
+        );
       }
 
       // Second approach: Use regex to extract the port directly
@@ -53,7 +56,7 @@ function getDatabasePort(options: PullOptions): string | null {
       );
       if (portMatch && portMatch[1]) {
         const port = portMatch[1];
-        Printer.log(`Found database port using regex: ${port}`);
+        Printer.log(`Found database port using regex: ${port}`, 'success');
         // Use the port as needed
         return port;
       }
@@ -68,7 +71,10 @@ function getDatabasePort(options: PullOptions): string | null {
           if (end === -1) return null;
           const portText = landoInfo.substring(portIndex + 5, end);
           const port = portText.trim().replace(/[^0-9]/g, '');
-          Printer.log(`Found database port using string extraction: ${port}`);
+          Printer.log(
+            `Found database port using string extraction: ${port}`,
+            'success'
+          );
           // Use the port as needed
           return port;
         }
@@ -227,7 +233,10 @@ export async function readConfig(options: PullOptions): Promise<PullConfig> {
       }
     }
 
-    if (config.local.dbPort === null || config.local.dbPort === undefined) {
+    if (
+      !options.skipDb &&
+      (config.local.dbPort === null || config.local.dbPort === undefined)
+    ) {
       Printer.log(
         'Database port not found in config. Trying to get it from Lando info...',
         'warning'
@@ -241,6 +250,10 @@ export async function readConfig(options: PullOptions): Promise<PullConfig> {
       config.local.dbPort = Number(detectedPort);
     }
 
+    Printer.log(
+      `Configuration loaded successfully from ${resolvedPath}`,
+      'success'
+    );
     return config;
   } catch (error: unknown) {
     Printer.error(error instanceof Error ? error.message : String(error));
