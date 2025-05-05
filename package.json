@@ -71,7 +71,7 @@
     "@sp-packages/printer": "^2.0.0",
     "commander": "^13.1.0",
     "fs-extra": "^11.3.0",
-    "mysql2": "^3.14.0"
+    "mysql2": "^3.14.1"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",
