@@ -69,7 +69,7 @@
   },
   "dependencies": {
     "@sp-packages/printer": "^2.0.0",
-    "commander": "^13.1.0",
+    "commander": "^14.0.0",
     "fs-extra": "^11.3.0",
     "mysql2": "^3.14.0"
   },
