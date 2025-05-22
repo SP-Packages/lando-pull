@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/SP-Packages/lando-pull/compare/v1.4.0...v1.4.1) (2025-05-22)
+
+### Bug Fixes
+
+* **dependencies:** update dependencies ([180a860](https://github.com/SP-Packages/lando-pull/commit/180a86081f743a3706af66da5d397ef225143fa6))
+
 ## [1.4.0](https://github.com/SP-Packages/lando-pull/compare/v1.3.0...v1.4.0) (2025-05-22)
 
 ### Features
