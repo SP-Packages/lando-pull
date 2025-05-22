@@ -1,3 +1,14 @@
+## [1.4.0](https://github.com/SP-Packages/lando-pull/compare/v1.3.0...v1.4.0) (2025-05-22)
+
+### Features
+
+* **config:** enhance logging for  port retrieval and config load ([65a9219](https://github.com/SP-Packages/lando-pull/commit/65a92197f748bf252510840a77b1d1dbcdcad657))
+
+### Bug Fixes
+
+* **dependencies:** update dependencies ([0a4b3a4](https://github.com/SP-Packages/lando-pull/commit/0a4b3a41d78de442354ed8b82423666df110cf22))
+* **workflows:** update action versions in labeler, prepare, and release ([b273c21](https://github.com/SP-Packages/lando-pull/commit/b273c21a90a626cffb741b381fc8e73301ce33aa))
+
 ## [1.3.0](https://github.com/SP-Packages/lando-pull/compare/v1.2.2...v1.3.0) (2025-04-17)
 
 ### Features
