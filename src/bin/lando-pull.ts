@@ -47,6 +47,8 @@ program
       Printer.enableQuiet();
     }
 
+    Printer.log('Running Lando Pull', 'header');
+
     if (options.skipDb && options.skipFiles) {
       Printer.error('skipping both database and files. Nothing to do!');
       process.exit(1);
@@ -54,6 +56,7 @@ program
 
     let config: PullConfig;
     try {
+      Printer.log('Reading configuration', 'subheader');
       config = await readConfig(options);
 
       if (options.authMethod) {

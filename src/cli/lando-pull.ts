@@ -12,7 +12,6 @@ export async function landoPull(
   config: PullConfig,
   options: PullOptions
 ): Promise<void> {
-  Printer.log('Running Lando Pull', 'header');
   const spinner = Printer.spinner('Running pull...').start();
 
   try {
