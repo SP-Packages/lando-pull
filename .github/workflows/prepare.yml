@@ -14,13 +14,13 @@ permissions:
 
 jobs:
   prepare:
-    uses: SP-Packages/actions/.github/workflows/code-quality.yml@v1.1.5
+    uses: SP-Packages/actions/.github/workflows/code-quality.yml@v1.1.7
     with:
       VERBOSE: true
 
   test:
     needs: prepare
-    uses: SP-Packages/actions/.github/workflows/code-testing.yml@v1.1.5
+    uses: SP-Packages/actions/.github/workflows/code-testing.yml@v1.1.7
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
