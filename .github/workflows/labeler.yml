@@ -10,4 +10,4 @@ permissions:
 
 jobs:
   labeler:
-    uses: SP-Packages/actions/.github/workflows/pr-labeler.yml@v1.1.5
+    uses: SP-Packages/actions/.github/workflows/pr-labeler.yml@v1.1.9
