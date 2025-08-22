@@ -5,13 +5,7 @@ export default {
     [
       '@semantic-release/commit-analyzer',
       {
-        preset: 'conventionalcommits',
-        releaseRules: [
-          {
-            type: 'build',
-            release: 'patch'
-          }
-        ]
+        preset: 'conventionalcommits'
       }
     ],
     [
@@ -37,15 +31,6 @@ export default {
           'chore(release): v${nextRelease.version} [skip ci]\n\n${nextRelease.notes}'
       }
     ],
-    [
-      '@semantic-release/github',
-      {
-        assets: [
-          { path: 'dist.zip', label: 'Distribution Files', overwrite: true },
-          { path: 'package.json', label: 'Package Metadata', overwrite: true },
-          { path: 'README.md', label: 'Documentation', overwrite: true }
-        ]
-      }
-    ]
+    '@semantic-release/github'
   ]
 };
