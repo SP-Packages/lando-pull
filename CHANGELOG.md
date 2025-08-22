@@ -1,3 +1,14 @@
+## [1.4.3](https://github.com/SP-Packages/lando-pull/compare/v1.4.2...v1.4.3) (2025-08-22)
+
+### Bug Fixes
+
+* **dependencies:** update dependencies ([d4d19c3](https://github.com/SP-Packages/lando-pull/commit/d4d19c31b129f95a5388dd05f36ea483399e6c90))
+* **dependencies:** update dependencies ([804811f](https://github.com/SP-Packages/lando-pull/commit/804811fa4ace8f2c624aeefc76e12a4389e569f4))
+* **lint-staged:** enforce strict mode for lintrc command ([147a408](https://github.com/SP-Packages/lando-pull/commit/147a408acfacf334fb3cf868d81ee3788d325eba))
+* **release.config:** simplify commit-analyzer config and clean up assets ([3f2e3c0](https://github.com/SP-Packages/lando-pull/commit/3f2e3c09fe80ac5d8ca85369240eb60580a81739))
+* **scripts:** update husky command and add watch script ([f5fb005](https://github.com/SP-Packages/lando-pull/commit/f5fb0056cfa8b457cb56e7893094a62f63656dd1))
+* **tools:** update behavior and priorities for composer and npm tools ([931b12f](https://github.com/SP-Packages/lando-pull/commit/931b12ff81e9938f5b776b474b8c7ed28025eebb))
+
 ## [1.4.2](https://github.com/SP-Packages/lando-pull/compare/v1.4.1...v1.4.2) (2025-07-26)
 
 ### Bug Fixes
