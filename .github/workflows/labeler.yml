@@ -3,11 +3,14 @@ name: 'Pull Request Labeler'
 on:
   - pull_request_target
 
-permissions:
-  issues: write
-  contents: write
-  pull-requests: write
-
 jobs:
   labeler:
-    uses: SP-Packages/actions/.github/workflows/pr-labeler.yml@v1.1.9
+    uses: SP-Libraries/actions/.github/workflows/pr-labeler.yml@v0.4.1
+    with:
+      VERBOSE: true
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    permissions:
+      issues: write
+      contents: read
+      pull-requests: write

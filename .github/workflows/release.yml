@@ -5,32 +5,28 @@ on:
     branches:
       - main
 
-permissions:
-  issues: write
-  contents: write
-  pull-requests: write
-
 jobs:
   prepare:
-    uses: SP-Packages/actions/.github/workflows/code-quality.yml@v1.1.9
+    uses: SP-Libraries/actions/.github/workflows/code-quality.yml@v0.4.1
     with:
       VERBOSE: true
-
-  test:
-    needs: prepare
-    uses: SP-Packages/actions/.github/workflows/code-testing.yml@v1.1.9
     secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    with:
-      SLUG: SP-Packages/lando-pull
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
   release:
-    needs: test
-    uses: SP-Packages/actions/.github/workflows/semantic-release.yml@v1.1.9
+    needs: prepare
+    uses: SP-Libraries/actions/.github/workflows/semantic-release.yml@v0.4.1
+    with:
+      VERBOSE: true
+      RUN_BUILD: true
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  rebase:
+  sync:
     needs: release
-    uses: SP-Packages/actions/.github/workflows/rebase-develop.yml@v1.1.9
+    uses: SP-Libraries/actions/.github/workflows/sync-branch.yml@v0.4.1
+    with:
+      VERBOSE: true
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
