@@ -1,0 +1,11 @@
+{
+  "extends": "npm-package-json-lint-config-default",
+  "rules": {
+    "require-author": "error",
+    "require-description": "error",
+    "require-license": "error",
+    "no-repeated-dependencies": "error",
+    "prefer-alphabetical-dependencies": "error",
+    "prefer-alphabetical-scripts": "error"
+  }
+}
